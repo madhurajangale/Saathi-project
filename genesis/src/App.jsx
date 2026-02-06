@@ -3,8 +3,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/Home";
-import TestBorrowPage from "./pages/TestBorrowPage";
+// import TestBorrowPage from "./pages/TestBorrowPage";
 import CreateLoanButton from "./pages/CreateLoanBUtton";
+import TestBorrowPage from "./pages/BorrowForm";
+import GlobalLoanRequests from "./pages/BorrowRequest";
 function App() {
   // ✅ COMMON STATE (THIS WAS MISSING)
   const [walletAddress, setWalletAddress] = useState(null);
@@ -31,6 +33,16 @@ function App() {
         <Route
           path="/create-loan"
           element={<CreateLoanButton walletAddress={walletAddress} />}
+        />
+
+        <Route
+          path="/borrowform"
+          element={<TestBorrowPage walletAddress={walletAddress} />}
+        />
+
+        <Route
+          path="/lend"
+          element={<GlobalLoanRequests walletAddress={walletAddress} />}
         />
       </Routes>
     </BrowserRouter>

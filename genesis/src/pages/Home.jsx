@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { getWalletTransactions } from "../services/etherscan";
 import { getWalletBalance } from "../services/etherscan";
+import { Link } from "react-router-dom";
 import {
   User,
   LogOut,
@@ -216,12 +217,16 @@ useEffect(() => {
 
             {/* Action Buttons */}
             <div className="flex gap-4 w-full md:w-auto">
-              <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-white text-slate-950 font-bold rounded-xl hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl">
-                <ArrowDownCircle size={20} /> Borrow
-              </button>
-              <button className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-slate-800 border border-slate-700 text-white font-bold rounded-xl hover:bg-slate-700 transition-all hover:border-slate-600">
+             <Link
+  to="/borrowform"
+  className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-white text-slate-950 font-bold rounded-xl hover:bg-slate-100 transition-all shadow-lg hover:shadow-xl"
+>
+  <ArrowDownCircle size={20} /> Borrow
+</Link>
+              
+              <Link to="/lend" className="flex-1 md:flex-none flex items-center justify-center gap-3 px-8 py-4 bg-slate-800 border border-slate-700 text-white font-bold rounded-xl hover:bg-slate-700 transition-all hover:border-slate-600">
                 <ArrowUpCircle size={20} /> Lend
-              </button>
+              </Link>
             </div>
           </div>
         </section>

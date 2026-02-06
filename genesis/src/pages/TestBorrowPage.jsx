@@ -1,5 +1,5 @@
 import { connectWallet } from "../utils/metamask";
-import BorrowForm from "../components/BorrowForm";
+import BorrowForm from "./BorrowForm";
 
 const TestBorrowPage = () => {
 
