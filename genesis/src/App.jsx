@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/Home";
+import TestBorrowPage from "./pages/TestBorrowPage";
 
 function App() {
   // ✅ COMMON STATE (THIS WAS MISSING)
@@ -20,6 +21,7 @@ function App() {
             />
           }
         />
+         <Route path="/test-borrow" element={<TestBorrowPage />} />
 
         <Route
           path="/dashboard"
