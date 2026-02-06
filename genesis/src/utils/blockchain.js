@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
-import GroupPoolABI from "../contracts/GroupPool.json";
-import LoanFactoryABI from "../contracts/LoanFactory.json";
-import LoanContractABI from "../contracts/LoanContract.json";
+import GroupPoolABI from "../abi/GroupPool.json";
+import LoanFactoryABI from "../abi/LoanFactory.json";
+import LoanContractABI from "../abi/LoanContract.json";
 
 // Replace with deployed addresses
 export const GROUP_POOL_ADDRESS = "0x185eD25539C55a852D79CaE02567673B2370aE64";

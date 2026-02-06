@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, LogOut, Users, Wallet } from "lucide-react";
 import { getGroupPoolContract } from "../utils/blockchain";
+import GroupPoolABI from "../abi/GroupPool.json";
 
 const GroupPoolPage = ({ walletAddress }) => {
   const navigate = useNavigate();
