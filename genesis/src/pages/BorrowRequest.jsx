@@ -92,6 +92,75 @@ export default function OpenLoanRequests() {
     }
   };
 
+  // 🔥 WITHDRAW FUNCTION (BORROWER ONLY)
+  const withdrawLoan = async (loan) => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
+
+      if (userAddress.toLowerCase() !== loan.borrower.toLowerCase()) {
+        alert("❌ Only the borrower can withdraw this loan.");
+        return;
+      }
+
+      const loanManager = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        LoanManagerJSON.abi,
+        signer
+      );
+
+      const tx = await loanManager.withdrawLoan(loan.loanId);
+      console.log("Withdraw transaction sent:", tx.hash);
+      await tx.wait();
+
+      alert("✅ Funds withdrawn successfully!");
+      loadLoans();
+    } catch (err) {
+      console.error(err);
+      alert(err.reason || "Transaction failed");
+    }
+  };
+
+  // 🔥 REPAY FUNCTION (BORROWER ONLY)
+  const repayLoan = async (loan) => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const userAddress = await signer.getAddress();
+
+      if (userAddress.toLowerCase() !== loan.borrower.toLowerCase()) {
+        alert("❌ Only the borrower can repay this loan.");
+        return;
+      }
+
+      const loanManager = new ethers.Contract(
+        CONTRACT_ADDRESS,
+        LoanManagerJSON.abi,
+        signer
+      );
+
+      const repaymentAmount = await loanManager.calculateRepayment(loan.loanId);
+      const tx = await loanManager.repayLoan(loan.loanId, { value: repaymentAmount });
+      console.log("Repay transaction sent:", tx.hash);
+      await tx.wait();
+
+      alert("✅ Loan repaid successfully!");
+      loadLoans();
+    } catch (err) {
+      console.error(err);
+      alert(err.reason || "Transaction failed");
+    }
+  };
+
+  // Helper to get loan status text
+  const getLoanStatus = (loan) => {
+    if (loan.repaid) return "Repaid";
+    if (loan.withdrawn) return "Active";
+    if (loan.funded) return "Funded (Withdraw)";
+    return "Requested";
+  };
+
   return (
     <div style={{ marginTop: "40px" }}>
       <h2>Open Loan Requests (Global)</h2>
@@ -118,18 +187,33 @@ export default function OpenLoanRequests() {
             {loans.map((loan) => (
               <tr key={loan.loanId}>
                 <td>{loan.loanId}</td>
-                <td>{loan.borrower}</td>
+                <td>{loan.borrower.slice(0, 6)}...{loan.borrower.slice(-4)}</td>
                 <td>{loan.amountEth}</td>
                 <td>{loan.interestRate}</td>
                 <td>{Math.floor(loan.duration / 86400)}</td>
                 <td>{loan.createdAt}</td>
-                <td>{loan.funded ? "Funded" : "Requested"}</td>
+                <td>{getLoanStatus(loan)}</td>
                 <td>
+                  {/* Lend button - for unfunded loans */}
                   {!loan.funded && (
                     <button onClick={() => lendLoan(loan)}>
                       Lend
                     </button>
                   )}
+                  {/* Withdraw button - for funded but not withdrawn loans */}
+                  {loan.funded && !loan.withdrawn && !loan.repaid && (
+                    <button onClick={() => withdrawLoan(loan)} style={{ backgroundColor: '#4CAF50', color: 'white' }}>
+                      Withdraw
+                    </button>
+                  )}
+                  {/* Repay button - for withdrawn but not repaid loans */}
+                  {loan.withdrawn && !loan.repaid && (
+                    <button onClick={() => repayLoan(loan)} style={{ backgroundColor: '#2196F3', color: 'white' }}>
+                      Repay
+                    </button>
+                  )}
+                  {/* Completed */}
+                  {loan.repaid && <span>✅ Done</span>}
                 </td>
               </tr>
             ))}
