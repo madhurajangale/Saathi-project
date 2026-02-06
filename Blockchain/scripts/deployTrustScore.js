@@ -1,7 +1,7 @@
 const hre = require("hardhat");
 
 async function main() {
-  const TrustScore = await hre.ethers.getContractFactory("TrustScore");
+  const TrustScore = await hre.ethers.getContractFactory("TrustScoreSid");
 
   const trustScore = await TrustScore.deploy({
     gasLimit: 3_000_000,
