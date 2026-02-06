@@ -11,6 +11,8 @@ export default function TestBorrowPage() {
   const [duration, setDuration] = useState("");
   const [trustScore, setTrustScore] = useState(null);
   const [interestRate, setInterestRate] = useState(null);
+  const [maxBorrowLimit, setMaxBorrowLimit] = useState(null);
+  const [safetyFee, setSafetyFee] = useState(null);
 
   // 🔹 Check wallet on load
   useEffect(() => {
@@ -45,31 +47,32 @@ export default function TestBorrowPage() {
     await fetchTrustScore(accounts[0]);
   };
 
-  // 🔹 Fetch Trust Score
+  // 🔹 Fetch Trust Score and Borrower Limits
   const fetchTrustScore = async (address) => {
     const provider = new ethers.BrowserProvider(window.ethereum);
 
-    const trustScoreContract = new ethers.Contract(
-      TRUST_SCORE_ADDRESS,
-      ["function getScore(address) view returns (uint256)"],
+    const loanManager = new ethers.Contract(
+      LOAN_MANAGER_ADDRESS,
+      LoanManagerJSON.abi,
       provider
     );
 
-    const score = await trustScoreContract.getScore(address);
+    // Get all borrower limits in one call
+    const [score, maxLimit, rate, fee] = await loanManager.getBorrowerLimits(address);
+    
     const numericScore = Number(score);
-
     setTrustScore(numericScore);
-    calculateInterestRate(numericScore);
-    console.log(trustScore)
+    setMaxBorrowLimit(ethers.formatEther(maxLimit));
+    setInterestRate(`${Number(rate) / 100}%`);
+    setSafetyFee(`${Number(fee) / 100}%`);
+    
+    console.log("Borrower limits:", { score: numericScore, maxLimit: ethers.formatEther(maxLimit), rate: Number(rate) / 100, fee: Number(fee) / 100 });
   };
 
-  // 🔹 Interest Rate Logic (example)
-  const calculateInterestRate = (score) => {
-    if (score >= 90) setInterestRate("3%");
-    else if (score >= 75) setInterestRate("5%");
-    else if (score >= 60) setInterestRate("8%");
-    else if (score >= 50) setInterestRate("12%");
-    else setInterestRate("15%");
+  // Check if amount exceeds limit
+  const isAmountValid = () => {
+    if (!amount || !maxBorrowLimit) return true;
+    return parseFloat(amount) <= parseFloat(maxBorrowLimit);
   };
 
   // 🔹 Request Loan
@@ -77,6 +80,12 @@ export default function TestBorrowPage() {
     try {
       if (!amount || !duration) {
         alert("Enter amount and duration");
+        return;
+      }
+
+      // Validate amount against max borrow limit
+      if (!isAmountValid()) {
+        alert(`Amount exceeds your max borrow limit of ${maxBorrowLimit} ETH`);
         return;
       }
 
@@ -247,6 +256,63 @@ export default function TestBorrowPage() {
           </div>
         </div>
 
+        {/* New row for Max Borrow Limit and Safety Fee */}
+        <div style={{ display: "flex", gap: "16px" }}>
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "8px"
+            }}>
+              🏦 Max Borrow Limit
+            </label>
+            <input
+              value={maxBorrowLimit ? `${maxBorrowLimit} ETH` : "Loading..."}
+              disabled
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                border: "2px solid #e5e7eb",
+                backgroundColor: "#f0fdf4",
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#15803d",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: "block",
+              fontSize: "14px",
+              fontWeight: "600",
+              color: "#374151",
+              marginBottom: "8px"
+            }}>
+              🛡️ Safety Fee
+            </label>
+            <input
+              value={safetyFee ?? "Loading..."}
+              disabled
+              style={{
+                width: "100%",
+                padding: "12px 16px",
+                borderRadius: "8px",
+                border: "2px solid #e5e7eb",
+                backgroundColor: "#fef3c7",
+                fontSize: "16px",
+                fontWeight: "600",
+                color: "#92400e",
+                boxSizing: "border-box"
+              }}
+            />
+          </div>
+        </div>
+
         <div>
           <label style={{
             display: "block",
@@ -261,19 +327,24 @@ export default function TestBorrowPage() {
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            placeholder="Enter amount in ETH"
+            placeholder={maxBorrowLimit ? `Max: ${maxBorrowLimit} ETH` : "Enter amount in ETH"}
             style={{
               width: "100%",
               padding: "12px 16px",
               borderRadius: "8px",
-              border: "2px solid #d1d5db",
+              border: `2px solid ${!isAmountValid() ? "#ef4444" : "#d1d5db"}`,
               fontSize: "16px",
               transition: "border-color 0.2s ease",
               boxSizing: "border-box"
             }}
-            onFocus={(e) => e.target.style.borderColor = "#3b82f6"}
-            onBlur={(e) => e.target.style.borderColor = "#d1d5db"}
+            onFocus={(e) => e.target.style.borderColor = isAmountValid() ? "#3b82f6" : "#ef4444"}
+            onBlur={(e) => e.target.style.borderColor = isAmountValid() ? "#d1d5db" : "#ef4444"}
           />
+          {!isAmountValid() && (
+            <p style={{ color: "#ef4444", fontSize: "12px", marginTop: "4px" }}>
+              ⚠️ Amount exceeds your max borrow limit of {maxBorrowLimit} ETH
+            </p>
+          )}
         </div>
 
         <div>

@@ -16,10 +16,19 @@ contract LoanManager {
     uint256 public repaymentBonus = 5;       // +5 points for successful repayment
     uint256 public defaultPenalty = 10;      // -10 points for defaulted loan
 
+    // Safety pool address for collecting fees
+    address public safetyPoolAddress;
+
     constructor(address _trustScoreAddress) {
         trustScoreContract = ITrustScore(_trustScoreAddress);
         admin = msg.sender;
         minTrustScore = 40; // Default minimum trust score
+    }
+
+    // Set safety pool address (admin only)
+    function setSafetyPoolAddress(address _safetyPoolAddress) public {
+        require(msg.sender == admin, "Only admin");
+        safetyPoolAddress = _safetyPoolAddress;
     }
 
     struct Loan {
@@ -27,6 +36,7 @@ contract LoanManager {
         address lender;
         uint256 amount;
         uint256 interestRate; // Interest rate in basis points (e.g., 500 = 5%)
+        uint256 safetyFee;    // Safety fee in basis points
         uint256 duration;
         uint256 createdAt;
         bool funded;
@@ -56,11 +66,59 @@ contract LoanManager {
         return 1500;                           // 15% for very poor credit
     }
 
-    // Calculate total repayment amount (principal + interest)
+    // Get maximum borrow limit based on trust score (in wei)
+    // Higher trust = larger loans allowed
+    function getMaxBorrowLimit(uint256 trustScore) public pure returns (uint256) {
+        if (trustScore >= 90) return 10 ether;    // Excellent: up to 10 ETH
+        if (trustScore >= 75) return 5 ether;     // Good: up to 5 ETH
+        if (trustScore >= 60) return 2 ether;     // Fair: up to 2 ETH
+        if (trustScore >= 50) return 0.5 ether;   // Poor: up to 0.5 ETH
+        return 0.1 ether;                         // Very poor: up to 0.1 ETH
+    }
+
+    // Get safety fee based on trust score (in basis points)
+    // Lower trust = higher safety fee to protect lenders
+    function getSafetyFee(uint256 trustScore) public pure returns (uint256) {
+        if (trustScore >= 90) return 50;       // 0.5% for excellent credit
+        if (trustScore >= 75) return 100;      // 1% for good credit
+        if (trustScore >= 60) return 200;      // 2% for fair credit
+        if (trustScore >= 50) return 400;      // 4% for poor credit
+        return 600;                            // 6% for very poor credit
+    }
+
+    // Get borrower's current limit info
+    function getBorrowerLimits(address borrower) public view returns (
+        uint256 trustScore,
+        uint256 maxBorrowLimit,
+        uint256 interestRate,
+        uint256 safetyFee
+    ) {
+        trustScore = trustScoreContract.getScore(borrower);
+        maxBorrowLimit = getMaxBorrowLimit(trustScore);
+        interestRate = getInterestRate(trustScore);
+        safetyFee = getSafetyFee(trustScore);
+    }
+
+    // Calculate total repayment amount (principal + interest + safety fee)
     function calculateRepayment(uint256 loanId) public view returns (uint256) {
         Loan memory loan = loans[loanId];
         uint256 interest = (loan.amount * loan.interestRate) / 10000;
-        return loan.amount + interest;
+        uint256 safetyFeeAmount = (loan.amount * loan.safetyFee) / 10000;
+        return loan.amount + interest + safetyFeeAmount;
+    }
+
+    // Get breakdown of repayment components
+    function getRepaymentBreakdown(uint256 loanId) public view returns (
+        uint256 principal,
+        uint256 interest,
+        uint256 safetyFeeAmount,
+        uint256 total
+    ) {
+        Loan memory loan = loans[loanId];
+        principal = loan.amount;
+        interest = (loan.amount * loan.interestRate) / 10000;
+        safetyFeeAmount = (loan.amount * loan.safetyFee) / 10000;
+        total = principal + interest + safetyFeeAmount;
     }
 
     // Admin function to update minimum trust score
@@ -118,7 +176,12 @@ contract LoanManager {
         uint256 score = trustScoreContract.getScore(msg.sender);
         require(score >= minTrustScore, "Trust score too low");
 
+        // Enforce maximum borrow limit based on trust score
+        uint256 maxLimit = getMaxBorrowLimit(score);
+        require(amount <= maxLimit, "Amount exceeds your borrow limit");
+
         uint256 interestRate = getInterestRate(score);
+        uint256 safetyFee = getSafetyFee(score);
 
         loans.push(
             Loan({
@@ -126,6 +189,7 @@ contract LoanManager {
                 lender: address(0),
                 amount: amount,
                 interestRate: interestRate,
+                safetyFee: safetyFee,
                 duration: duration,
                 createdAt: block.timestamp,
                 funded: false,
@@ -185,15 +249,18 @@ contract LoanManager {
         require(!loan.defaulted, "Loan is defaulted");
         require(loan.lender != address(0), "Invalid lender address");
 
-        // Calculate total repayment (principal + interest)
-        uint256 totalRepayment = calculateRepayment(loanId);
+        // Get repayment breakdown
+        (uint256 principal, uint256 interest, uint256 safetyFeeAmount, uint256 totalRepayment) = getRepaymentBreakdown(loanId);
         require(msg.value >= totalRepayment, "Insufficient repayment amount");
 
-        // Calculate interest amount
-        uint256 interest = totalRepayment - loan.amount;
+        // Transfer principal + interest to lender
+        uint256 lenderAmount = principal + interest;
+        payable(loan.lender).transfer(lenderAmount);
 
-        // Transfer to lender first, then mark as repaid
-        payable(loan.lender).transfer(totalRepayment);
+        // Transfer safety fee to safety pool (if set)
+        if (safetyPoolAddress != address(0) && safetyFeeAmount > 0) {
+            payable(safetyPoolAddress).transfer(safetyFeeAmount);
+        }
 
         loan.repaid = true;
 
