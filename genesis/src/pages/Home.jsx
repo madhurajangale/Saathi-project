@@ -1,5 +1,8 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { getWalletTransactions } from "../services/etherscan";
+
 import {
   User,
   LogOut,
@@ -34,6 +37,20 @@ const data = [
 
 const Dashboard = ({ walletAddress }) => {
   const navigate = useNavigate();
+  const [transactions, setTransactions] = useState([]);
+const [loadingTx, setLoadingTx] = useState(true);
+  useEffect(() => {
+  if (!walletAddress) return;
+
+  const fetchTx = async () => {
+    setLoadingTx(true);
+    const txs = await getWalletTransactions(walletAddress);
+    setTransactions(txs);
+    setLoadingTx(false);
+  };
+
+  fetchTx();
+}, [walletAddress]);
 
   // 🔒 Redirect if wallet not connected
   useEffect(() => {
@@ -88,33 +105,47 @@ const Dashboard = ({ walletAddress }) => {
       </nav>
 
       <main className="max-w-7xl mx-auto p-6 md:p-10">
-        {/* Wallet Overview */}
-        <section className="mb-10">
-          <div className="bg-slate-900/40 border border-slate-800 p-8 rounded-3xl relative overflow-hidden">
-            <div className="relative z-10">
-              <p className="text-slate-500 text-sm font-medium mb-1">
-                Total Wallet Balance
-              </p>
-              <h2 className="text-4xl font-bold text-white mb-8">
-                $12,450.80{" "}
-                <span className="text-emerald-500 text-sm font-normal ml-2">
-                  +2.4% today
-                </span>
-              </h2>
+        <section className="mt-10">
+  <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
+    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+      <History size={18} /> Wallet Transactions
+    </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <button className="flex items-center justify-center gap-3 p-5 bg-white text-slate-950 font-bold rounded-2xl hover:bg-slate-200 transition-all">
-                  <ArrowDownCircle size={24} /> Take a Loan
-                </button>
-                <button className="flex items-center justify-center gap-3 p-5 bg-slate-800 border border-slate-700 text-white font-bold rounded-2xl hover:bg-slate-700 transition-all">
-                  <ArrowUpCircle size={24} /> Lend Money
-                </button>
-              </div>
+    {loadingTx ? (
+      <p className="text-slate-500 text-sm">Loading transactions...</p>
+    ) : transactions.length === 0 ? (
+      <p className="text-slate-500 text-sm">No transactions found</p>
+    ) : (
+      <div className="space-y-4 max-h-[400px] overflow-y-auto">
+        {transactions.slice(0, 10).map((tx) => (
+          <div
+            key={tx.hash}
+            className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center"
+          >
+            <div>
+              <p className="text-xs text-slate-400">
+                Hash: {tx.hash.slice(0, 10)}...
+              </p>
+              <p className="text-xs text-slate-500">
+                From: {tx.from.slice(0, 6)}... → To: {tx.to.slice(0, 6)}...
+              </p>
             </div>
 
-            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full -mr-20 -mt-20 blur-3xl"></div>
+            <div className="text-right">
+              <p className="text-sm font-bold text-emerald-400">
+                {Number(tx.value) / 1e18} ETH
+              </p>
+              <p className="text-[10px] text-slate-500">
+                Block #{tx.blockNumber}
+              </p>
+            </div>
           </div>
-        </section>
+        ))}
+      </div>
+    )}
+  </div>
+</section>
+
 
         {/* Analytics Graph */}
         <section className="mb-10">
