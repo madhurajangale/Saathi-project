@@ -8,6 +8,87 @@ export default function OpenLoanRequests() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
 
+const styles = {
+    containerr: {
+        height: "100vh",
+        backgroundColor: "#0f172a", // Dark Blue-Gray
+    },
+    container: {
+      marginTop: "40px",
+      padding: "24px",
+      backgroundColor: "#050a14", // Deep Black/Blue
+      borderRadius: "16px",
+      color: "#e2e8f0",
+      fontFamily: "'Inter', sans-serif",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+      border: "1px solid #1e293b"
+    },
+    header: {
+      fontSize: "24px",
+      fontWeight: "600",
+      marginBottom: "20px",
+      color: "#60a5fa", // Bright Blue accent
+      letterSpacing: "-0.025em"
+    },
+    table: {
+      width: "100%",
+      borderCollapse: "separate",
+      borderSpacing: "0 8px",
+      textAlign: "left"
+    },
+    th: {
+      padding: "12px 16px",
+      color: "#94a3b8",
+      fontSize: "13px",
+      textTransform: "uppercase",
+      fontWeight: "700",
+      borderBottom: "1px solid #1e293b"
+    },
+    tr: {
+      backgroundColor: "#0f172a", // Dark Blue-Gray
+      transition: "transform 0.2s ease",
+    },
+    td: {
+      padding: "16px",
+      fontSize: "14px",
+      borderTop: "1px solid #1e293b",
+      borderBottom: "1px solid #1e293b"
+    },
+    address: {
+      fontFamily: "monospace",
+      backgroundColor: "#1e293b",
+      padding: "4px 8px",
+      borderRadius: "6px",
+      color: "#38bdf8"
+    },
+    badge: (status) => ({
+      padding: "4px 10px",
+      borderRadius: "12px",
+      fontSize: "12px",
+      fontWeight: "600",
+      backgroundColor: status === 'Active' ? "#064e3b" : "#1e293b",
+      color: status === 'Active' ? "#34d399" : "#94a3b8",
+      border: `1px solid ${status === 'Active' ? "#059669" : "#334155"}`
+    }),
+    btn: (bg) => ({
+      padding: "8px 16px",
+      borderRadius: "8px",
+      border: "none",
+      cursor: "pointer",
+      fontWeight: "600",
+      fontSize: "13px",
+      transition: "opacity 0.2s",
+      backgroundColor: bg,
+      color: "white",
+      boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+    }),
+    emptyState: {
+      textAlign: "center",
+      padding: "40px",
+      color: "#64748b"
+    }
+  };
+
   useEffect(() => {
     loadLoans();
   }, []);
@@ -162,64 +243,95 @@ export default function OpenLoanRequests() {
   };
 
   return (
-    <div style={{ marginTop: "40px" }}>
-      <h2>Open Loan Requests (Global)</h2>
+    <div className="containerr">
+    <div style={styles.container}>
+      <h2 style={styles.header}>Open Loan Requests (Global)</h2>
 
       {loading ? (
-        <p>Loading loans...</p>
+        <div style={styles.emptyState}>
+          <div className="spinner">Loading loans...</div>
+        </div>
       ) : loans.length === 0 ? (
-        <p>No loan requests</p>
+        <p style={styles.emptyState}>No loan requests found in the smart contract.</p>
       ) : (
-        <table border="1" cellPadding="10">
-          <thead>
-            <tr>
-              <th>Loan ID</th>
-              <th>Borrower</th>
-              <th>Amount (ETH)</th>
-              <th>Interest (%)</th>
-              <th>Duration (days)</th>
-              <th>Created</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loans.map((loan) => (
-              <tr key={loan.loanId}>
-                <td>{loan.loanId}</td>
-                <td>{loan.borrower.slice(0, 6)}...{loan.borrower.slice(-4)}</td>
-                <td>{loan.amountEth}</td>
-                <td>{loan.interestRate}</td>
-                <td>{Math.floor(loan.duration / 86400)}</td>
-                <td>{loan.createdAt}</td>
-                <td>{getLoanStatus(loan)}</td>
-                <td>
-                  {/* Lend button - for unfunded loans */}
-                  {!loan.funded && (
-                    <button onClick={() => lendLoan(loan)}>
-                      Lend
-                    </button>
-                  )}
-                  {/* Withdraw button - for funded but not withdrawn loans */}
-                  {loan.funded && !loan.withdrawn && !loan.repaid && (
-                    <button onClick={() => withdrawLoan(loan)} style={{ backgroundColor: '#4CAF50', color: 'white' }}>
-                      Withdraw
-                    </button>
-                  )}
-                  {/* Repay button - for withdrawn but not repaid loans */}
-                  {loan.withdrawn && !loan.repaid && (
-                    <button onClick={() => repayLoan(loan)} style={{ backgroundColor: '#2196F3', color: 'white' }}>
-                      Repay
-                    </button>
-                  )}
-                  {/* Completed */}
-                  {loan.repaid && <span>✅ Done</span>}
-                </td>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={styles.table}>
+            <thead>
+              <tr>
+                <th style={styles.th}>Loan ID</th>
+                <th style={styles.th}>Borrower</th>
+                <th style={styles.th}>Amount</th>
+                <th style={styles.th}>Interest</th>
+                <th style={styles.th}>Duration</th>
+                <th style={styles.th}>Status</th>
+                <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {loans.map((loan) => (
+                <tr key={loan.loanId} style={styles.tr}>
+                  <td style={{ ...styles.td, borderLeft: "1px solid #1e293b", borderTopLeftRadius: "8px", borderBottomLeftRadius: "8px" }}>
+                    #{loan.loanId}
+                  </td>
+                  <td style={styles.td}>
+                    <span style={styles.address}>
+                      {loan.borrower.slice(0, 6)}...{loan.borrower.slice(-4)}
+                    </span>
+                  </td>
+                  <td style={{ ...styles.td, fontWeight: '700', color: '#fff' }}>
+                    {loan.amountEth} <span style={{ color: '#60a5fa', fontSize: '11px' }}>ETH</span>
+                  </td>
+                  <td style={styles.td}>{loan.interestRate}%</td>
+                  <td style={styles.td}>{Math.floor(loan.duration / 86400)} Days</td>
+                  <td style={styles.td}>
+                    <span style={styles.badge(getLoanStatus(loan))}>
+                      {getLoanStatus(loan)}
+                    </span>
+                  </td>
+                  <td style={{ ...styles.td, borderRight: "1px solid #1e293b", borderTopRightRadius: "8px", borderBottomRightRadius: "8px", textAlign: 'right' }}>
+                    
+                    {!loan.funded && (
+                      <button 
+                        onClick={() => lendLoan(loan)} 
+                        style={styles.btn("#2563eb")}
+                        onMouseOver={(e) => e.target.style.opacity = '0.8'}
+                        onMouseOut={(e) => e.target.style.opacity = '1'}
+                      >
+                        Lend Funds
+                      </button>
+                    )}
+
+                    {loan.funded && !loan.withdrawn && !loan.repaid && (
+                      <button 
+                        onClick={() => withdrawLoan(loan)} 
+                        style={styles.btn("#10b981")}
+                      >
+                        Withdraw
+                      </button>
+                    )}
+
+                    {loan.withdrawn && !loan.repaid && (
+                      <button 
+                        onClick={() => repayLoan(loan)} 
+                        style={styles.btn("#3b82f6")}
+                      >
+                        Repay Loan
+                      </button>
+                    )}
+
+                    {loan.repaid && (
+                      <span style={{ color: '#10b981', fontWeight: '600' }}>
+                        <i style={{ marginRight: '4px' }}>✓</i> Settled
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
+    </div>
     </div>
   );
 }
