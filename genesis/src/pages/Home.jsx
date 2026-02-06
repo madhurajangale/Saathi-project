@@ -1,6 +1,5 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
 import { getWalletTransactions } from "../services/etherscan";
 
 import {
@@ -38,19 +37,20 @@ const data = [
 const Dashboard = ({ walletAddress }) => {
   const navigate = useNavigate();
   const [transactions, setTransactions] = useState([]);
-const [loadingTx, setLoadingTx] = useState(true);
+  const [loadingTx, setLoadingTx] = useState(true);
+
   useEffect(() => {
-  if (!walletAddress) return;
+    if (!walletAddress) return;
 
-  const fetchTx = async () => {
-    setLoadingTx(true);
-    const txs = await getWalletTransactions(walletAddress);
-    setTransactions(txs);
-    setLoadingTx(false);
-  };
+    const fetchTx = async () => {
+      setLoadingTx(true);
+      const txs = await getWalletTransactions(walletAddress);
+      setTransactions(txs);
+      setLoadingTx(false);
+    };
 
-  fetchTx();
-}, [walletAddress]);
+    fetchTx();
+  }, [walletAddress]);
 
   // 🔒 Redirect if wallet not connected
   useEffect(() => {
@@ -72,7 +72,6 @@ const [loadingTx, setLoadingTx] = useState(true);
           </span>
         </div>
 
-        {/* Right Section */}
         <div className="hidden md:flex items-center gap-6 text-sm">
           <button className="flex items-center gap-2 text-slate-400 hover:text-white">
             <Users size={18} /> GroupPool
@@ -83,7 +82,6 @@ const [loadingTx, setLoadingTx] = useState(true);
 
           <div className="h-6 w-px bg-slate-800" />
 
-          {/* Wallet Display */}
           <div className="flex items-center gap-2 text-slate-300 bg-slate-900/40 px-3 py-1.5 rounded-lg border border-slate-800">
             <Wallet size={16} />
             {walletAddress
@@ -105,49 +103,77 @@ const [loadingTx, setLoadingTx] = useState(true);
       </nav>
 
       <main className="max-w-7xl mx-auto p-6 md:p-10">
+        {/* TRANSACTIONS */}
         <section className="mt-10">
-  <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
-    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-      <History size={18} /> Wallet Transactions
-    </h3>
+          <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
+            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+              <History size={18} /> Wallet Transactions
+            </h3>
 
-    {loadingTx ? (
-      <p className="text-slate-500 text-sm">Loading transactions...</p>
-    ) : transactions.length === 0 ? (
-      <p className="text-slate-500 text-sm">No transactions found</p>
-    ) : (
-      <div className="space-y-4 max-h-[400px] overflow-y-auto">
-        {transactions.slice(0, 10).map((tx) => (
-          <div
-            key={tx.hash}
-            className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center"
-          >
-            <div>
-              <p className="text-xs text-slate-400">
-                Hash: {tx.hash.slice(0, 10)}...
-              </p>
-              <p className="text-xs text-slate-500">
-                From: {tx.from.slice(0, 6)}... → To: {tx.to.slice(0, 6)}...
-              </p>
-            </div>
+            {loadingTx ? (
+              <p className="text-slate-500 text-sm">Loading transactions...</p>
+            ) : transactions.length === 0 ? (
+              <p className="text-slate-500 text-sm">No transactions found</p>
+            ) : (
+              <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                {transactions.slice(0, 10).map((tx) => {
+                  const isCredit =
+                    tx.to?.toLowerCase() === walletAddress.toLowerCase();
+                  const amount = (Number(tx.value) / 1e18).toFixed(4);
 
-            <div className="text-right">
-              <p className="text-sm font-bold text-emerald-400">
-                {Number(tx.value) / 1e18} ETH
-              </p>
-              <p className="text-[10px] text-slate-500">
-                Block #{tx.blockNumber}
-              </p>
-            </div>
+                  return (
+                    <div
+                      key={tx.hash}
+                      className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="text-xs text-slate-400">
+                          Hash: {tx.hash.slice(0, 10)}...
+                        </p>
+                        <p className="text-xs text-slate-500">
+                          {isCredit ? "From" : "To"}:{" "}
+                          {(isCredit ? tx.from : tx.to).slice(0, 6)}...
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        {isCredit ? (
+                          <ArrowDownCircle
+                            size={22}
+                            className="text-emerald-400"
+                          />
+                        ) : (
+                          <ArrowUpCircle
+                            size={22}
+                            className="text-red-400"
+                          />
+                        )}
+
+                        <div className="text-right">
+                          <p
+                            className={`text-sm font-bold ${
+                              isCredit
+                                ? "text-emerald-400"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {isCredit ? "+" : "-"} {amount} ETH
+                          </p>
+                          <p className="text-[10px] text-slate-500">
+                            {isCredit ? "Received" : "Sent"} • Block #
+                            {tx.blockNumber}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
-        ))}
-      </div>
-    )}
-  </div>
-</section>
+        </section>
 
-
-        {/* Analytics Graph */}
+        {/* GRAPH */}
         <section className="mb-10">
           <div className="bg-slate-900/20 border border-slate-800 p-6 rounded-3xl">
             <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
@@ -157,118 +183,21 @@ const [loadingTx, setLoadingTx] = useState(true);
             <div className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={data}>
-                  <defs>
-                    <linearGradient
-                      id="colorBalance"
-                      x1="0"
-                      y1="0"
-                      x2="0"
-                      y2="1"
-                    >
-                      <stop offset="5%" stopColor="#475569" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#475569" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="#1e293b"
-                    vertical={false}
-                  />
-                  <XAxis
-                    dataKey="name"
-                    stroke="#475569"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <YAxis
-                    stroke="#475569"
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "#0f172a",
-                      border: "1px solid #334155",
-                      borderRadius: "8px",
-                    }}
-                    itemStyle={{ color: "#f8fafc" }}
-                  />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                  <XAxis dataKey="name" stroke="#475569" />
+                  <YAxis stroke="#475569" />
+                  <Tooltip />
                   <Area
                     type="monotone"
                     dataKey="balance"
                     stroke="#94a3b8"
-                    fill="url(#colorBalance)"
-                    strokeWidth={2}
+                    fill="#334155"
                   />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
         </section>
-
-        {/* Active Transactions */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Loans */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <Clock size={18} className="text-orange-400" /> Loans to Repay
-            </h3>
-
-            {[1, 2].map((item) => (
-              <div
-                key={item}
-                className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center mb-4"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    Personal Loan #024{item}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Due in {item * 5} days
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold">$500.00</p>
-                  <button className="text-[10px] font-bold text-blue-400">
-                    Repay Now
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Lendings */}
-          <div className="bg-slate-900/40 border border-slate-800 rounded-3xl p-6">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-              <TrendingUp size={18} className="text-emerald-400" /> Active Lendings
-            </h3>
-
-            {[1, 2].map((item) => (
-              <div
-                key={item}
-                className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center mb-4"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    Borrower: 0x71...{item}e4
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Interest: 12% APY
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-emerald-400">
-                    +$1,200.00
-                  </p>
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-500 font-bold uppercase">
-                    On Track
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
       </main>
 
       <footer className="mt-20 py-8 text-center border-t border-slate-900">
