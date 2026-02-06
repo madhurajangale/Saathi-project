@@ -7,17 +7,30 @@ async function main() {
 
   console.log("SafetyPool deployed to:", await safetyPool.getAddress());
 
-  const trustScoreAddress ="0x87F69F5F30B8B785F19059c212A8C93be66D7DA0";
+  // Deploy TrustScore
+  const TrustScore = await hre.ethers.getContractFactory("TrustScore");
+  const trustScore = await TrustScore.deploy();
+  await trustScore.waitForDeployment();
 
-  const Lending = await hre.ethers.getContractFactory("Lending");
-  const lending = await Lending.deploy(
-    trustScoreAddress,
-    await safetyPool.getAddress()
-  );
+  const trustScoreAddress = await trustScore.getAddress();
+  console.log("TrustScore deployed to:", trustScoreAddress);
 
-  await lending.waitForDeployment();
+  // Deploy LoanManager with TrustScore address
+  const LoanManager = await hre.ethers.getContractFactory("LoanManager");
+  const loanManager = await LoanManager.deploy(trustScoreAddress);
+  await loanManager.waitForDeployment();
 
-  console.log("Lending deployed to:", await lending.getAddress());
+  const loanManagerAddress = await loanManager.getAddress();
+  console.log("LoanManager deployed to:", loanManagerAddress);
+
+  // Set LoanManager address in TrustScore contract
+  console.log("Setting LoanManager address in TrustScore...");
+  await trustScore.setLoanManagerAddress(loanManagerAddress);
+  console.log("✅ LoanManager address set in TrustScore");
+
+  console.log("\n📝 Update your .env with:");
+  console.log(`TRUST_SCORE_ADDRESS=${trustScoreAddress}`);
+  console.log(`LOAN_MANAGER_ADDRESS=${loanManagerAddress}`);
 }
 
 main().catch(console.error);
