@@ -14,6 +14,11 @@ export default function OpenLoanRequests() {
 
   const loadLoans = async () => {
     try {
+      if (!window.ethereum) {
+        alert("MetaMask not installed");
+        return;
+      }
+
       const provider = new ethers.BrowserProvider(window.ethereum);
 
       const loanManager = new ethers.Contract(
@@ -22,23 +27,36 @@ export default function OpenLoanRequests() {
         provider
       );
 
+      // ✅ EXACT SAME AS HARDHAT SCRIPT
       const rawLoans = await loanManager.getLoans();
 
-      const formattedLoans = rawLoans.map((loan, index) => ({
-        loanId: index,
-        borrower: loan[0],
-        lender: loan[1],
-        amountWei: loan[2],
-        amountEth: ethers.formatEther(loan[2]),
-        interestRate: (Number(loan[3]) / 100).toFixed(2),
-        duration: Number(loan[4]),
-        funded: loan[5],
-        withdrawn: loan[6],
-        repaid: loan[7],
-      }));
+      const formattedLoans = rawLoans
+  .filter((loan) => loan.borrower !== ethers.ZeroAddress)
+  .map((loan, index) => ({
+    loanId: index,
+
+    borrower: loan.borrower,
+    lender: loan.lender,
+
+    amountWei: loan.amount,
+    amountEth: ethers.formatEther(loan.amount),
+
+    interestRate: (Number(loan.interestRate) / 100).toFixed(2),
+    duration: Number(loan.duration),
+
+    createdAt: new Date(
+      Number(loan.createdAt) * 1000
+    ).toLocaleString(),
+
+    funded: loan.funded,
+    repaid: loan.repaid,
+    withdrawn: loan.withdrawn,
+    defaulted: loan.defaulted, // ✅ NEW
+  }));
+
 
       setLoans(formattedLoans);
-      console.log(formattedLoans)
+      console.log("Formatted loans:", formattedLoans);
     } catch (err) {
       console.error("Error loading loans:", err);
     } finally {
@@ -46,14 +64,9 @@ export default function OpenLoanRequests() {
     }
   };
 
-  // 🔥 LEND FUNCTION (PER ROW)
+  // 🔥 LEND FUNCTION (UNCHANGED)
   const lendLoan = async (loan) => {
     try {
-      if (!window.ethereum) {
-        alert("MetaMask not installed");
-        return;
-      }
-
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
 
@@ -72,21 +85,10 @@ export default function OpenLoanRequests() {
       await tx.wait();
 
       alert("✅ Loan funded successfully!");
-      loadLoans(); // refresh UI
+      loadLoans();
     } catch (err) {
-      console.error("Full error:", err);
-
-      if (err.code === 4001) {
-        alert("❌ Transaction rejected by user.");
-        return;
-      }
-
-      if (err.reason) {
-        alert(`❌ ${err.reason}`);
-        return;
-      }
-
-      alert("❌ Transaction failed. Check console.");
+      console.error(err);
+      alert(err.reason || "Transaction failed");
     }
   };
 
@@ -107,6 +109,7 @@ export default function OpenLoanRequests() {
               <th>Amount (ETH)</th>
               <th>Interest (%)</th>
               <th>Duration (days)</th>
+              <th>Created</th>
               <th>Status</th>
               <th>Action</th>
             </tr>
@@ -119,9 +122,10 @@ export default function OpenLoanRequests() {
                 <td>{loan.amountEth}</td>
                 <td>{loan.interestRate}</td>
                 <td>{Math.floor(loan.duration / 86400)}</td>
-                <td>{!loan.funded ? "Funded" : "Requested"}</td>
+                <td>{loan.createdAt}</td>
+                <td>{loan.funded ? "Funded" : "Requested"}</td>
                 <td>
-                  {loan.funded && (
+                  {!loan.funded && (
                     <button onClick={() => lendLoan(loan)}>
                       Lend
                     </button>

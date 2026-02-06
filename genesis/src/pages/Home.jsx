@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { getWalletTransactions } from "../services/etherscan";
 import { getWalletBalance } from "../services/etherscan";
+import PendingRepayments from "../components/PendingRepayments";
 import { Link } from "react-router-dom";
 import {
   User,
@@ -24,6 +25,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+
 
 // Mock data for the wallet graph
 const data = [
@@ -349,28 +351,8 @@ useEffect(() => {
             <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
               <Clock size={18} className="text-orange-400" /> Loans to Repay
             </h3>
-
-            {[1, 2].map((item) => (
-              <div
-                key={item}
-                className="bg-slate-950/50 p-4 rounded-xl border border-slate-800 flex justify-between items-center mb-4"
-              >
-                <div>
-                  <p className="text-sm font-medium">
-                    Personal Loan #024{item}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    Due in {item * 5} days
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold">$500.00</p>
-                  <button className="text-[10px] font-bold text-blue-400">
-                    Repay Now
-                  </button>
-                </div>
-              </div>
-            ))}
+             <PendingRepayments/>
+            
           </div>
 
           {/* Lendings */}
