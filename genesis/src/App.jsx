@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import GroupPoolPage from "./pages/GroupPoolPage";
 import LandingPage from "./pages/LandingPage";
 import Home from "./pages/Home";
+import JoinGroup from "./pages/JoinGroup";
 // import TestBorrowPage from "./pages/TestBorrowPage";
 import CreateLoanButton from "./pages/CreateLoanBUtton";
 import TestBorrowPage from "./pages/BorrowForm";
@@ -44,6 +45,7 @@ function App() {
           path="/lend"
           element={<GlobalLoanRequests walletAddress={walletAddress} />}
         />
+        <Route path="/join-group" element={<JoinGroup />} />
       </Routes>
     </BrowserRouter>
   );

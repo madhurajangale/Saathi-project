@@ -95,4 +95,35 @@ contract GroupPool {
 
         payable(claim.claimant).transfer(claim.amount);
     }
+//     function joinGroup() external {
+//     require(!isMember[msg.sender], "Already member");
+
+//     isMember[msg.sender] = true;
+//     members.push(msg.sender);
+// }
+
+function contribute() external payable onlyMember {
+    require(msg.value > 0, "Send ETH");
+
+    totalPoolBalance += msg.value;
+}
+
+function joinGroupAndContribute() external payable {
+    if (!isMember[msg.sender]) {
+        isMember[msg.sender] = true;
+        members.push(msg.sender);
+    }
+
+    if (msg.value > 0) {
+        totalPoolBalance += msg.value;
+    }
+}
+function joinGroup() external {
+    require(!isMember[msg.sender], "Already member");
+
+    isMember[msg.sender] = true;
+    members.push(msg.sender);
+}
+
+
 }
