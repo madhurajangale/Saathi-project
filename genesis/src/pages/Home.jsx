@@ -25,6 +25,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
+import TrustScoreCard from "../components/DisplayTrust";
 
 
 // Mock data for the wallet graph
@@ -224,6 +225,9 @@ useEffect(() => {
         </p>
 
         
+      </div>
+      <div>
+        <TrustScoreCard walletAddress={walletAddress} />
       </div>
 
             {/* Action Buttons */}
