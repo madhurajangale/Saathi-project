@@ -14,7 +14,7 @@ contract LoanManager {
     constructor(address _trustScoreAddress) {
         trustScoreContract = ITrustScore(_trustScoreAddress);
         admin = msg.sender;
-        minTrustScore = 40; // Default minimum trust score
+        minTrustScore = 50; // Default minimum trust score
     }
 
     struct Loan {
@@ -50,7 +50,7 @@ contract LoanManager {
     function createLoan(uint256 amount, uint256 duration) public {
 
         uint256 score = trustScoreContract.getScore(msg.sender);
-        require(score >= minTrustScore, "Trust score too low");
+        require(score <= minTrustScore, "Trust score too low");
 
         loans.push(
             Loan({
