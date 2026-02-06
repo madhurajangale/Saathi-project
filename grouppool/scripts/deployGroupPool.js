@@ -3,10 +3,11 @@ const hre = require("hardhat");
 async function main() {
   const GroupPool = await hre.ethers.getContractFactory("GroupPool");
   const groupPool = await GroupPool.deploy();
-  await groupPool.deployed();
+ await groupPool.waitForDeployment?.();  
 
-  console.log("GroupPool deployed to:", groupPool.address);
+  console.log("GroupPool deployed to:",  groupPool.target ?? groupPool.address);
 }
+
 
 main()
   .then(() => process.exit(0))

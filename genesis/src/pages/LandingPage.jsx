@@ -71,9 +71,12 @@ const LandingPage = ({ walletAddress, setWalletAddress }) => {
   <ArrowUpRight size={18} />
 </button>
 
-            <button className="px-8 py-4 bg-transparent border border-slate-700 text-slate-300 font-bold rounded-lg hover:bg-slate-900/50 transition-all">
-              Join a Group Pool
-            </button>
+           <button
+  onClick={() => navigate("/join-group")}
+  className="px-8 py-4 bg-transparent border border-slate-700 text-slate-300 font-bold rounded-lg hover:bg-slate-900/50 transition-all"
+>
+  Join a Group Pool
+</button>
           </div>
         </div>
       </div>
