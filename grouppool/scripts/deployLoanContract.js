@@ -1,3 +1,4 @@
+
 const hre = require("hardhat");
 
 async function main() {
@@ -6,7 +7,7 @@ async function main() {
 
   // 2️⃣ Dynamic addresses / values
   const borrower = "0x1b46C1954361A8cB698711426fFaf4f0B1b0f039";
-  const groupPool = "0x185eD25539C55a852D79CaE02567673B2370aE64";
+  const groupPool = "0xA301394d8b84F92Dffb0D807a84695fCEF6D2Cf8";
   const duration = 7 * 24 * 60 * 60; // 7 days
  const principal = hre.ethers.parseEther("0.01"); // 0.01 ETH instead of 0.1 ETH
 const interest = hre.ethers.parseEther("0.001"); // 0.001 ETH interest

@@ -39,7 +39,7 @@ contract LoanContract {
         require(!repaid, "Already repaid");
         require(msg.value == principal + interest, "Incorrect amount");
 
-        uint256 poolShare = (interest * 10) / 100; // 10% to pool
+        uint256 poolShare = (interest * IGroupPool(groupPool).CONTRIBUTION_PERCENT()) / 100;
         uint256 lenderShare = principal + (interest - poolShare);
 
         repaid = true;
