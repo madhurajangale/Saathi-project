@@ -1,14 +1,17 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 import LoanManagerJSON from "../abi/LoanManager.json";
+import TrustScoreJSON from "../abi/TrustScore.json";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_LOAN_MANAGER_ADDRESS;
+const TRUST_SCORE_ADDRESS = import.meta.env.VITE_TRUST_SCORE_ADDRESS;
 
 export default function OpenLoanRequests() {
   const [loans, setLoans] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showLendingModal, setShowLendingModal] = useState(false);
   const [selectedLoan, setSelectedLoan] = useState(null);
+  const [trustScores, setTrustScores] = useState({});
 
   useEffect(() => {
     loadLoans();
@@ -32,7 +35,7 @@ export default function OpenLoanRequests() {
       const rawLoans = await loanManager.getLoans();
 
       const formattedLoans = rawLoans
-        .filter((loan) => loan.borrower !== ethers.ZeroAddress)
+        .filter((loan) => loan.borrower !== ethers.ZeroAddress && !loan.funded)
         .map((loan, index) => ({
           loanId: index,
           borrower: loan.borrower,
@@ -50,6 +53,24 @@ export default function OpenLoanRequests() {
 
       setLoans(formattedLoans);
       console.log("Formatted loans:", formattedLoans);
+
+      // Fetch trust scores for all borrowers
+      const trustScoreContract = new ethers.Contract(
+        TRUST_SCORE_ADDRESS,
+        TrustScoreJSON.abi,
+        provider
+      );
+
+      const scores = {};
+      for (const loan of formattedLoans) {
+        try {
+          const score = await trustScoreContract.getScore(loan.borrower);
+          scores[loan.borrower.toLowerCase()] = Number(score);
+        } catch {
+          scores[loan.borrower.toLowerCase()] = 50; // Default score
+        }
+      }
+      setTrustScores(scores);
     } catch (err) {
       console.error("Error loading loans:", err);
     } finally {
@@ -199,8 +220,9 @@ export default function OpenLoanRequests() {
     <div className="min-h-screen bg-slate-900">
       <div className="mt-10 p-6 bg-slate-950 rounded-2xl text-slate-200 font-sans shadow-2xl border border-slate-800 max-w-7xl mx-auto">
         <h2 className="text-2xl font-semibold mb-5 text-blue-400 tracking-tight">
-          Open Loan Requests (Global)
+          🏦 Open Loan Requests
         </h2>
+        <p className="text-slate-400 text-sm mb-4">Browse unfunded loan requests and choose how to lend</p>
 
         {loading ? (
           <div className="text-center py-10 text-slate-500">
@@ -220,6 +242,9 @@ export default function OpenLoanRequests() {
                   </th>
                   <th className="px-4 py-3 text-left text-slate-400 text-xs uppercase font-bold border-b border-slate-800">
                     Borrower
+                  </th>
+                  <th className="px-4 py-3 text-left text-slate-400 text-xs uppercase font-bold border-b border-slate-800">
+                    Trust Score
                   </th>
                   <th className="px-4 py-3 text-left text-slate-400 text-xs uppercase font-bold border-b border-slate-800">
                     Amount
@@ -253,6 +278,19 @@ export default function OpenLoanRequests() {
                         {loan.borrower.slice(-4)}
                       </span>
                     </td>
+                    <td className="px-4 py-4 text-sm border-t border-b border-slate-800">
+                      {(() => {
+                        const score = trustScores[loan.borrower.toLowerCase()] || 50;
+                        let colorClass = "bg-red-900 text-red-400 border-red-600";
+                        if (score >= 75) colorClass = "bg-emerald-900 text-emerald-400 border-emerald-600";
+                        else if (score >= 50) colorClass = "bg-yellow-900 text-yellow-400 border-yellow-600";
+                        return (
+                          <span className={`px-2.5 py-1 rounded-xl text-xs font-semibold border ${colorClass}`}>
+                            {score}
+                          </span>
+                        );
+                      })()}
+                    </td>
                     <td className="px-4 py-4 text-sm font-bold text-white border-t border-b border-slate-800">
                       {loan.amountEth}{" "}
                       <span className="text-blue-400 text-xs">ETH</span>
@@ -275,38 +313,12 @@ export default function OpenLoanRequests() {
                       </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-right border-t border-b border-r border-slate-800 rounded-r-lg">
-                      {!loan.funded && (
-                        <button
-                          onClick={() => openLendingModal(loan)}
-                          className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs hover:opacity-80 transition-opacity shadow-lg"
-                        >
-                          Lend Funds
-                        </button>
-                      )}
-
-                      {loan.funded && !loan.withdrawn && !loan.repaid && (
-                        <button
-                          onClick={() => withdrawLoan(loan)}
-                          className="px-4 py-2 bg-emerald-600 text-white rounded-lg font-semibold text-xs hover:opacity-80 transition-opacity shadow-lg"
-                        >
-                          Withdraw
-                        </button>
-                      )}
-
-                      {loan.withdrawn && !loan.repaid && (
-                        <button
-                          onClick={() => repayLoan(loan)}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold text-xs hover:opacity-80 transition-opacity shadow-lg"
-                        >
-                          Repay Loan
-                        </button>
-                      )}
-
-                      {loan.repaid && (
-                        <span className="text-emerald-500 font-semibold">
-                          <i className="mr-1">✓</i> Settled
-                        </span>
-                      )}
+                      <button
+                        onClick={() => openLendingModal(loan)}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-xs hover:opacity-80 transition-opacity shadow-lg"
+                      >
+                        Lend Funds
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -334,6 +346,18 @@ export default function OpenLoanRequests() {
 
               {/* Loan Details */}
               <div className="bg-slate-800 p-4 rounded-xl mb-6 border border-slate-700">
+                <div className="flex justify-between mb-2 text-sm">
+                  <span className="text-slate-400">Borrower Trust Score:</span>
+                  <span className={`px-2.5 py-1 rounded-xl text-xs font-semibold border ${
+                    (trustScores[selectedLoan.borrower.toLowerCase()] || 50) >= 75
+                      ? "bg-emerald-900 text-emerald-400 border-emerald-600"
+                      : (trustScores[selectedLoan.borrower.toLowerCase()] || 50) >= 50
+                      ? "bg-yellow-900 text-yellow-400 border-yellow-600"
+                      : "bg-red-900 text-red-400 border-red-600"
+                  }`}>
+                    {trustScores[selectedLoan.borrower.toLowerCase()] || 50}
+                  </span>
+                </div>
                 <div className="flex justify-between mb-2 text-sm">
                   <span className="text-slate-400">Loan Amount:</span>
                   <span className="text-slate-200 font-semibold">
