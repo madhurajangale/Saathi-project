@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import LoanManagerJSON from "../abi/LoanManager.json";
 
 const CONTRACT_ADDRESS = import.meta.env.VITE_LOAN_MANAGER_ADDRESS;
+const TRUST_SCORE_ADDRESS = import.meta.env.VITE_TRUST_SCORE_ADDRESS;
 
 export default function OpenLoanRequests() {
   const [loans, setLoans] = useState([]);
@@ -111,29 +112,38 @@ const styles = {
       // ✅ EXACT SAME AS HARDHAT SCRIPT
       const rawLoans = await loanManager.getLoans();
 
-      const formattedLoans = rawLoans
-  .filter((loan) => loan.borrower !== ethers.ZeroAddress)
-  .map((loan, index) => ({
-    loanId: index,
+      // Fetch trust scores for all unique borrowers
+      const trustScoreContract = new ethers.Contract(
+        TRUST_SCORE_ADDRESS,
+        ["function getScore(address) view returns (uint256)"],
+        provider
+      );
 
-    borrower: loan.borrower,
-    lender: loan.lender,
-
-    amountWei: loan.amount,
-    amountEth: ethers.formatEther(loan.amount),
-
-    interestRate: (Number(loan.interestRate) / 100).toFixed(2),
-    duration: Number(loan.duration),
-
-    createdAt: new Date(
-      Number(loan.createdAt) * 1000
-    ).toLocaleString(),
-
-    funded: loan.funded,
-    repaid: loan.repaid,
-    withdrawn: loan.withdrawn,
-    defaulted: loan.defaulted, // ✅ NEW
-  }));
+      const formattedLoans = await Promise.all(
+        rawLoans
+          .filter((loan) => loan.borrower !== ethers.ZeroAddress)
+          .map(async (loan, index) => {
+            // Fetch trust score for this borrower
+            const trustScore = await trustScoreContract.getScore(loan.borrower);
+            
+            return {
+              loanId: index,
+              borrower: loan.borrower,
+              lender: loan.lender,
+              amountWei: loan.amount,
+              amountEth: ethers.formatEther(loan.amount),
+              interestRate: (Number(loan.interestRate) / 100).toFixed(2),
+              safetyFee: (Number(loan.safetyFee) / 100).toFixed(2),
+              duration: Number(loan.duration),
+              createdAt: new Date(Number(loan.createdAt) * 1000).toLocaleString(),
+              funded: loan.funded,
+              repaid: loan.repaid,
+              withdrawn: loan.withdrawn,
+              defaulted: loan.defaulted,
+              trustScore: Number(trustScore),
+            };
+          })
+      );
 
 
       setLoans(formattedLoans);
@@ -260,8 +270,10 @@ const styles = {
               <tr>
                 <th style={styles.th}>Loan ID</th>
                 <th style={styles.th}>Borrower</th>
+                <th style={styles.th}>Trust Score</th>
                 <th style={styles.th}>Amount</th>
                 <th style={styles.th}>Interest</th>
+                <th style={styles.th}>Safety Fee</th>
                 <th style={styles.th}>Duration</th>
                 <th style={styles.th}>Status</th>
                 <th style={{ ...styles.th, textAlign: 'right' }}>Action</th>
@@ -278,10 +290,24 @@ const styles = {
                       {loan.borrower.slice(0, 6)}...{loan.borrower.slice(-4)}
                     </span>
                   </td>
+                  <td style={styles.td}>
+                    <span style={{
+                      padding: "4px 10px",
+                      borderRadius: "12px",
+                      fontSize: "12px",
+                      fontWeight: "700",
+                      backgroundColor: loan.trustScore >= 75 ? "#064e3b" : loan.trustScore >= 50 ? "#854d0e" : "#7f1d1d",
+                      color: loan.trustScore >= 75 ? "#34d399" : loan.trustScore >= 50 ? "#fbbf24" : "#f87171",
+                      border: `1px solid ${loan.trustScore >= 75 ? "#059669" : loan.trustScore >= 50 ? "#ca8a04" : "#dc2626"}`
+                    }}>
+                      {loan.trustScore}
+                    </span>
+                  </td>
                   <td style={{ ...styles.td, fontWeight: '700', color: '#fff' }}>
                     {loan.amountEth} <span style={{ color: '#60a5fa', fontSize: '11px' }}>ETH</span>
                   </td>
                   <td style={styles.td}>{loan.interestRate}%</td>
+                  <td style={styles.td}>{loan.safetyFee}%</td>
                   <td style={styles.td}>{Math.floor(loan.duration / 86400)} Days</td>
                   <td style={styles.td}>
                     <span style={styles.badge(getLoanStatus(loan))}>
