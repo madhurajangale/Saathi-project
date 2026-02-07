@@ -4,6 +4,7 @@ import { useState } from "react";
 import { getWalletTransactions } from "../services/etherscan";
 import { getWalletBalance } from "../services/etherscan";
 import PendingRepayments from "../components/PendingRepayments";
+import MyLoans from "../components/MyLoans";
 import { Link } from "react-router-dom";
 import {
   User,
@@ -244,6 +245,11 @@ useEffect(() => {
               </Link>
             </div>
           </div>
+        </section>
+
+        {/* MY LOANS SECTION */}
+        <section className="mb-10">
+          <MyLoans walletAddress={walletAddress} />
         </section>
 
         <section className="mb-10">
